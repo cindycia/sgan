@@ -1,5 +1,6 @@
 import torch
 import random
+from scripts.geometry_utils import collision_check
 
 
 def bce_loss(input, target):
@@ -117,3 +118,38 @@ def final_displacement_error(
         return loss
     else:
         return torch.sum(loss)
+
+
+def collision_rate(pred_traj, pred_traj_rel, ped_keys, seq_start_end):
+    """
+    Input:
+        pred_traj: (pred_len, pedestrians in batch, 2)
+        pred_traj_rel: (pred_len, pedestrians in batch, 2)
+        ped_keys: (pedestrians in batch, )
+        seq_start_end: (bs, 2)
+    Output:
+    col_rates: list of float, len = total number of time frames in batch
+    """
+
+    col_rates = []
+    for (start, end) in seq_start_end:  # indices of data in a scene clip
+        start = start.item()
+        end = end.item()
+        clip_seqs = pred_traj[:, start:end, :]
+        clip_seqs_rel = pred_traj_rel[:, start:end, :]
+        clip_ped_keys = ped_keys[start:end]
+
+        for tf_idx in range(clip_seqs.shape[0]):
+            xys = clip_seqs[tf_idx, :, :]
+            headings = clip_seqs_rel[tf_idx, :, :]
+            num_peds = end - start
+            for ped1 in range(num_peds):
+                ped1_key = clip_ped_keys[ped1]
+                for ped2 in range(ped1 + 1, num_peds):
+                    ped2_key = clip_ped_keys[ped2]
+                    col = collision_check(xys[ped1], headings[ped1], ped1_key,
+                                    xys[ped2], headings[ped2], ped2_key)
+                    col_rates.append(float(col))
+
+    return col_rates
+

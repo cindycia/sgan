@@ -6,8 +6,10 @@ from attrdict import AttrDict
 
 from sgan.data.loader import data_loader
 from sgan.models import TrajectoryGenerator
-from sgan.losses import displacement_error, final_displacement_error
-from sgan.utils import relative_to_abs, get_dset_path
+from sgan.losses import displacement_error, final_displacement_error, collision_rate
+from sgan.utils import relative_to_abs, get_dset_path, debug
+from geometry_utils import collision_check
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_path', type=str)
@@ -57,10 +59,12 @@ def evaluate_helper(error, seq_start_end):
 
 def evaluate(args, loader, generator, num_samples):
     ade_outer, fde_outer = [], []
+    col = []
     total_traj = 0
     with torch.no_grad():
         for batch in loader:
-            batch = [tensor.cuda() for tensor in batch]
+            _, _, _, _, _, _, _, ped_keys = batch
+            batch = [tensor.cuda() for tensor in batch[:-1]]
             (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
              non_linear_ped, loss_mask, seq_start_end) = batch
 
@@ -68,18 +72,26 @@ def evaluate(args, loader, generator, num_samples):
             total_traj += pred_traj_gt.size(1)
 
             for _ in range(num_samples):
+                '''
+                pred_traj_fake_rel: (pred_len, pedestrains in batch, 2)
+                '''
                 pred_traj_fake_rel = generator(
                     obs_traj, obs_traj_rel, seq_start_end
                 )
+                debug(f'pred_traj_fake_rel shape {pred_traj_fake_rel.shape}')
                 pred_traj_fake = relative_to_abs(
                     pred_traj_fake_rel, obs_traj[-1]
                 )
+                debug(f'pred_traj_fake shape {pred_traj_fake.shape}')
+                debug(f'ped_keys shape {ped_keys.shape}')
+
                 ade.append(displacement_error(
                     pred_traj_fake, pred_traj_gt, mode='raw'
                 ))
                 fde.append(final_displacement_error(
                     pred_traj_fake[-1], pred_traj_gt[-1], mode='raw'
                 ))
+                col = col + collision_rate(pred_traj_fake, pred_traj_fake_rel, ped_keys, seq_start_end)
 
             ade_sum = evaluate_helper(ade, seq_start_end)
             fde_sum = evaluate_helper(fde, seq_start_end)
@@ -88,7 +100,8 @@ def evaluate(args, loader, generator, num_samples):
             fde_outer.append(fde_sum)
         ade = sum(ade_outer) / (total_traj * args.pred_len)
         fde = sum(fde_outer) / (total_traj)
-        return ade, fde
+        col_rate = sum(col) / len(col)
+        return ade, fde, col_rate
 
 
 def main(args):
@@ -107,9 +120,9 @@ def main(args):
         _args = AttrDict(checkpoint['args'])
         path = get_dset_path(_args.dataset_name, args.dset_type)
         _, loader = data_loader(_args, path)
-        ade, fde = evaluate(_args, loader, generator, args.num_samples)
-        print('Dataset: {}, Pred Len: {}, ADE: {:.2f}, FDE: {:.2f}'.format(
-            _args.dataset_name, _args.pred_len, ade, fde))
+        ade, fde, col_rate = evaluate(_args, loader, generator, args.num_samples)
+        print('Dataset: {}, Pred Len: {}, ADE: {:.2f}, FDE: {:.2f}, COL: {:.2f}'.format(
+            _args.dataset_name, _args.pred_len, ade, fde, col_rate))
 
 
 if __name__ == '__main__':

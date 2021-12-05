@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import torch
 import numpy as np
@@ -93,3 +94,10 @@ def relative_to_abs(rel_traj, start_pos):
     start_pos = torch.unsqueeze(start_pos, dim=1)
     abs_traj = displacement + start_pos
     return abs_traj.permute(1, 0, 2)
+
+
+def debug(msg, kill=False):
+    print(f'~~~~~~~~ {msg}')
+    sys.stdout.flush()
+    if kill:
+        exit("Killed by debugger")
