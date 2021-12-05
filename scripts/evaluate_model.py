@@ -9,7 +9,7 @@ from sgan.models import TrajectoryGenerator
 from sgan.losses import displacement_error, final_displacement_error, collision_rate
 from sgan.utils import relative_to_abs, get_dset_path, debug
 from geometry_utils import collision_check
-
+from cross_utils import load_cross_dataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_path', type=str)
@@ -58,6 +58,7 @@ def evaluate_helper(error, seq_start_end):
 
 
 def evaluate(args, loader, generator, num_samples):
+    load_cross_dataset()
     ade_outer, fde_outer = [], []
     col = []
     total_traj = 0
@@ -78,12 +79,12 @@ def evaluate(args, loader, generator, num_samples):
                 pred_traj_fake_rel = generator(
                     obs_traj, obs_traj_rel, seq_start_end
                 )
-                debug(f'pred_traj_fake_rel shape {pred_traj_fake_rel.shape}')
+                # debug(f'pred_traj_fake_rel shape {pred_traj_fake_rel.shape}')
                 pred_traj_fake = relative_to_abs(
                     pred_traj_fake_rel, obs_traj[-1]
                 )
-                debug(f'pred_traj_fake shape {pred_traj_fake.shape}')
-                debug(f'ped_keys shape {ped_keys.shape}')
+                # debug(f'pred_traj_fake shape {pred_traj_fake.shape}')
+                # debug(f'ped_keys shape {ped_keys.shape}')
 
                 ade.append(displacement_error(
                     pred_traj_fake, pred_traj_gt, mode='raw'

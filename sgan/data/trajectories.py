@@ -35,8 +35,8 @@ def seq_collate(data):
     (obs_seq_list, pred_seq_list, obs_seq_rel_list, pred_seq_rel_list,
      non_linear_ped_list, loss_mask_list, ped_key_list) = zip(*data)
 
-    debug('Before collate:\n'
-          f'obs_seq_list shape {len(obs_seq_list)}, {obs_seq_list[0].shape}\n')
+    # debug('Before collate:\n'
+    #       f'obs_seq_list shape {len(obs_seq_list)}, {obs_seq_list[0].shape}\n')
 
     _len = [len(seq) for seq in obs_seq_list]
     cum_start_idx = [0] + np.cumsum(_len).tolist()
@@ -59,17 +59,17 @@ def seq_collate(data):
         loss_mask, seq_start_end, ped_keys
     ]
 
-    debug('Processed data batch:\n'
-          f'obs_traj shape {out[0].shape}\n'
-          f'pred_traj shape {out[1].shape}\n'
-          f'obs_traj_rel shape {out[2].shape}\n'
-          f'pred_traj_rel shape {out[3].shape}\n'
-          f'non_linear_ped shape {out[4].shape}\n'
-          f'loss_mask shape {out[5].shape}\n'
-          f'seq_start_end shape {out[6].shape}\n'
-          f'ped_keys shapes {out[7].shape}')
+    # debug('Processed data batch:\n'
+    #       f'obs_traj shape {out[0].shape}\n'
+    #       f'pred_traj shape {out[1].shape}\n'
+    #       f'obs_traj_rel shape {out[2].shape}\n'
+    #       f'pred_traj_rel shape {out[3].shape}\n'
+    #       f'non_linear_ped shape {out[4].shape}\n'
+    #       f'loss_mask shape {out[5].shape}\n'
+    #       f'seq_start_end shape {out[6].shape}\n'
+    #       f'ped_keys shapes {out[7].shape}')
 
-    debug(f'ped keys {out[7]}')
+    # debug(f'ped keys {out[7]}')
     return tuple(out)
 
 
@@ -194,7 +194,8 @@ class TrajectoryDataset(Dataset):
                     '''
                     curr_ped_seq = curr_seq_data[curr_seq_data[:, 1] ==
                                                  ped_id, :]
-                    ped_keys.append('tf_' + str(int(curr_ped_seq[0, 0])) + '_a_' + str(int(curr_ped_seq[0, 1])))
+                    # ped_keys.append('tf_' + str(int(curr_ped_seq[0, 0])) + '_a_' + str(int(curr_ped_seq[0, 1])))
+                    ped_keys.append(str(int(curr_ped_seq[0, 1])))
                     curr_ped_seq = np.around(curr_ped_seq, decimals=4)
                     '''
                     pad_front: relative start frame of the pedestrian's traj w.r.t the clip

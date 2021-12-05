@@ -1,6 +1,7 @@
 import torch
 import random
 from scripts.geometry_utils import collision_check
+from scripts.cross_utils import get_ped_type_from_cross
 
 
 def bce_loss(input, target):
@@ -147,8 +148,8 @@ def collision_rate(pred_traj, pred_traj_rel, ped_keys, seq_start_end):
                 ped1_key = clip_ped_keys[ped1]
                 for ped2 in range(ped1 + 1, num_peds):
                     ped2_key = clip_ped_keys[ped2]
-                    col = collision_check(xys[ped1], headings[ped1], ped1_key,
-                                    xys[ped2], headings[ped2], ped2_key)
+                    col = collision_check(xys[ped1], headings[ped1], get_ped_type_from_cross(ped1_key),
+                                    xys[ped2], headings[ped2], get_ped_type_from_cross(ped2_key))
                     col_rates.append(float(col))
 
     return col_rates

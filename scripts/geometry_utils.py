@@ -1,6 +1,8 @@
 import math
 import numpy as np
 from typing import List
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 
 
 class AgentGeometry:
@@ -78,7 +80,7 @@ def get_geometry(tag: str):
     return DEFAULT_AGENT_PARAMS[tag]
 
 
-def get_bounding_box_corners(xy, heading, ped_type):
+def get_bounding_box_corners(xy:np.ndarray, heading:np.ndarray, ped_type:str):
     heading_rotate_90_clockwise = rotate_cw(xy, -math.pi / 2)
     g = get_geometry(ped_type)
     ref_to_front = g.len_ref_to_front
@@ -96,6 +98,7 @@ def get_bounding_box_corners(xy, heading, ped_type):
 def point_on_left_side(edge_start: np.ndarray, edge_end: np.ndarray, p: np.ndarray):
     edge = edge_end - edge_start
     dir = p - edge_start
+    print(f'np.outer(edge, dir)={np.outer(edge, dir)}')
     return np.outer(edge, dir) > 0
 
 
@@ -110,16 +113,25 @@ def in_rectangle(p: np.ndarray, rect: List[np.ndarray]):
 def in_collision(rect_1: List[np.ndarray], rect_2: List[np.ndarray]):
     # check whether there exists one vertex of rect_1 inside rect_2
     for p1 in rect_1:
-        if in_rectangle(p1, rect_2):
+        point = Point(p1[0], p1[1])
+        polygon = Polygon(rect_2)
+        if polygon.contains(point):  # if in_rectangle(p1, rect_2):
             return True
     # check whether there exists one vertex of rect_2 inside rect_1
     for p2 in rect_2:
-        if in_rectangle(p2, rect_1):
+        point = Point(p2[0], p2[1])
+        polygon = Polygon(rect_1)
+        if polygon.contains(point):  # if in_rectangle(p1, rect_2):
             return True
     return False
 
 
 def collision_check(xy1, heading1, ped_type1, xy2, heading2, ped_type2):
+    xy1, xy2, heading1, heading2 = xy1.cpu().detach().numpy(), xy2.cpu().detach().numpy(),\
+                                    heading1.cpu().detach().numpy(), heading2.cpu().detach().numpy()
+    heading1 = heading1 / np.linalg.norm(heading1)
+    heading2 = heading2 / np.linalg.norm(heading2)
+
     rect1 = get_bounding_box_corners(xy1, heading1, ped_type1)
     rect2 = get_bounding_box_corners(xy2, heading2, ped_type2)
     return in_collision(rect1, rect2)
